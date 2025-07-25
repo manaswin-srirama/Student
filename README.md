@@ -3,6 +3,9 @@
 
 This is a simple console-based Student Record System written in C. It allows users to add and view student records using file storage.
 
+## DEMO LINK 
+https://manaswin-srirama.github.io/Student/Indexx
+
 ## 💡 Features
 
 - Add student with ID, Name, and Marks
@@ -30,6 +33,4 @@ Srirama Manaswin Nanda Vardhan
 
 This project is open source under the MIT License.
 
-DEMO LINK 
-https://manaswin-srirama.github.io/Student/Indexx
 
