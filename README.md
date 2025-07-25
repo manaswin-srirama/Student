@@ -29,3 +29,7 @@ Srirama Manaswin Nanda Vardhan
 ## 📝 License
 
 This project is open source under the MIT License.
+
+DEMO LINK 
+https://manaswin-srirama.github.io/Student/Indexx
+
