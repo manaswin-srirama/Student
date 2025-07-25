@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Record System</title>
+  <style>
+    body {
+      font-family: Arial;
+      padding: 20px;
+      max-width: 700px;
+      margin: auto;
+      background-color: white;
+      color: black;
+      transition: 0.3s ease;
+    }
+
+    body.dark {
+      background-color: #121212;
+      color: white;
+    }
+
+    input, button, select {
+      margin: 5px 0;
+      padding: 8px;
+      width: 100%;
+      border: 1px solid #aaa;
+      border-radius: 4px;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #aaa;
+      padding: 8px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #f4f4f4;
+    }
+
+    body.dark th {
+      background-color: #222;
+    }
+
+    #toggleBtn {
+      width: auto;
+      padding: 5px 10px;
+      float: right;
+      margin-bottom: 10px;
+    }
+
+    .failing {
+      background-color: #ffc5c5 !important;
+    }
+
+    canvas {
+      margin-top: 20px;
+    }
+
+    .action-btn {
+      padding: 5px 10px;
+      margin: 2px;
+    }
+  </style>
+</head>
+<body>
+  <h2>📘 Student Record System 
+    <button id="toggleBtn" onclick="toggleDarkMode()">🌓 Dark Mode</button>
+  </h2>
+
+  <input type="text" id="name" placeholder="Student Name" />
+  <input type="number" id="s1" placeholder="Subject 1 Marks" />
+  <input type="number" id="s2" placeholder="Subject 2 Marks" />
+  <input type="number" id="s3" placeholder="Subject 3 Marks" />
+  <input type="number" id="s4" placeholder="Subject 4 Marks" />
+  <input type="number" id="s5" placeholder="Subject 5 Marks" />
+
+  <button onclick="addStudent()">Add Student</button>
+  <button onclick="clearData()">Clear All</button>
+
+  <select onchange="sortTable(this.value)">
+    <option value="">-- Sort By --</option>
+    <option value="gpa">GPA (High to Low)</option>
+    <option value="name">Name (A-Z)</option>
+  </select>
+
+  <table id="studentTable">
+    <thead>
+      <tr>
+        <th>ID</th><th>Name</th><th>GPA</th><th>Grade</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <canvas id="gpaChart" height="200"></canvas>
+  <canvas id="gradeChart" height="200"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    function calculateGPA(marks) {
+      let sum = marks.reduce((a, b) => a + b, 0);
+      return (sum / marks.length).toFixed(2);
+    }
+
+    function getGrade(gpa) {
+      gpa = parseFloat(gpa);
+      if (gpa >= 9) return "A+";
+      else if (gpa >= 8) return "A";
+      else if (gpa >= 7) return "B";
+      else if (gpa >= 6) return "C";
+      else return "F";
+    }
+
+    function generateID() {
+      return "S" + Math.floor(1000 + Math.random() * 9000);
+    }
+
+    function addStudent() {
+      const name = document.getElementById("name").value;
+      const marks = [
+        parseFloat(document.getElementById("s1").value),
+        parseFloat(document.getElementById("s2").value),
+        parseFloat(document.getElementById("s3").value),
+        parseFloat(document.getElementById("s4").value),
+        parseFloat(document.getElementById("s5").value)
+      ];
+
+      if (!name || marks.some(isNaN)) {
+        alert("Please enter all fields correctly.");
+        return;
+      }
+
+      if (marks.some(m => m < 0 || m > 100)) {
+        alert("Each subject mark must be between 0 and 100.");
+        return;
+      }
+
+      const gpa = calculateGPA(marks);
+      const grade = getGrade(gpa);
+      const id = generateID();
+
+      const student = { id, name, gpa, grade };
+      let students = JSON.parse(localStorage.getItem("students") || "[]");
+      students.push(student);
+      localStorage.setItem("students", JSON.stringify(students));
+
+      displayStudents();
+      clearForm();
+    }
+
+    function displayStudents(sortBy = null) {
+      let students = JSON.parse(localStorage.getItem("students") || "[]");
+      if (sortBy === "gpa") students.sort((a, b) => b.gpa - a.gpa);
+      if (sortBy === "name") students.sort((a, b) => a.name.localeCompare(b.name));
+
+      const tbody = document.querySelector("#studentTable tbody");
+      tbody.innerHTML = "";
+      students.forEach((s, index) => {
+        const row = document.createElement("tr");
+        if (s.grade === "F") row.classList.add("failing");
+        row.innerHTML = `
+          <td>${s.id}</td>
+          <td>${s.name}</td>
+          <td>${s.gpa}</td>
+          <td>${s.grade}</td>
+          <td>
+            <button class="action-btn" onclick="editStudent(${index})">✏️ Edit</button>
+            <button class="action-btn" onclick="deleteStudent(${index})">🗑️ Delete</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+
+      renderCharts(students);
+    }
+
+    function deleteStudent(index) {
+      let students = JSON.parse(localStorage.getItem("students") || "[]");
+      students.splice(index, 1);
+      localStorage.setItem("students", JSON.stringify(students));
+      displayStudents();
+    }
+
+    function editStudent(index) {
+      let students = JSON.parse(localStorage.getItem("students") || "[]");
+      const student = students[index];
+
+      document.getElementById("name").value = student.name;
+      // Dummy values to help edit — GPA is not recalculated from marks since they are not stored.
+      document.getElementById("s1").value = "";
+      document.getElementById("s2").value = "";
+      document.getElementById("s3").value = "";
+      document.getElementById("s4").value = "";
+      document.getElementById("s5").value = "";
+
+      students.splice(index, 1);
+      localStorage.setItem("students", JSON.stringify(students));
+      displayStudents();
+    }
+
+    function clearForm() {
+      document.getElementById("name").value = "";
+      document.getElementById("s1").value = "";
+      document.getElementById("s2").value = "";
+      document.getElementById("s3").value = "";
+      document.getElementById("s4").value = "";
+      document.getElementById("s5").value = "";
+    }
+
+    function clearData() {
+      localStorage.removeItem("students");
+      displayStudents();
+    }
+
+    function sortTable(value) {
+      displayStudents(value);
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark");
+    }
+
+    function renderCharts(data) {
+      const names = data.map(s => s.name);
+      const gpas = data.map(s => s.gpa);
+      const grades = {};
+      data.forEach(s => grades[s.grade] = (grades[s.grade] || 0) + 1);
+
+      const ctx1 = document.getElementById("gpaChart").getContext("2d");
+      if (window.gpaChart) window.gpaChart.destroy();
+      window.gpaChart = new Chart(ctx1, {
+        type: "bar",
+        data: {
+          labels: names,
+          datasets: [{
+            label: "GPA",
+            data: gpas,
+            backgroundColor: "skyblue"
+          }]
+        }
+      });
+
+      const ctx2 = document.getElementById("gradeChart").getContext("2d");
+      if (window.gradeChart) window.gradeChart.destroy();
+      window.gradeChart = new Chart(ctx2, {
+        type: "pie",
+        data: {
+          labels: Object.keys(grades),
+          datasets: [{
+            data: Object.values(grades),
+            backgroundColor: ["#4CAF50", "#2196F3", "#FFC107", "#FF5722", "#9C27B0"]
+          }]
+        }
+      });
+    }
+
+    window.onload = () => displayStudents();
+ // Move to next input on Enter
+const inputs = Array.from(document.querySelectorAll("input"));
+inputs.forEach((input, index) => {
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (index + 1 < inputs.length) {
+        inputs[index + 1].focus();
+      } else {
+        document.querySelector("button[onclick='addStudent()']").click();
+      }
+    }
+  });
+});
+
+ </script>
+</body>
+</html>
